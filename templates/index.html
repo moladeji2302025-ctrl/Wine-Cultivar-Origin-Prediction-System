@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wine Cultivar Origin Prediction System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .predict-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .reset-btn {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .reset-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .result-box {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border: 2px solid #667eea;
+        }
+        
+        .result-box h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .cultivar-result {
+            font-size: 1.3em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .confidence {
+            color: #555;
+            margin: 10px 0;
+        }
+        
+        .probabilities {
+            margin-top: 15px;
+        }
+        
+        .probability-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .probability-item:last-child {
+            border-bottom: none;
+        }
+        
+        .error-box {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #ffe6e6;
+            border: 2px solid #ff4444;
+            color: #cc0000;
+        }
+        
+        .info-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+        
+        .info-section h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .info-section ul {
+            margin-left: 20px;
+            color: #666;
+        }
+        
+        .info-section li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍷 Wine Cultivar Origin Prediction System</h1>
+        <p class="subtitle">Enter wine chemical properties to predict the cultivar origin</p>
+        
+        <form method="POST" action="/predict">
+            {% for feature in features %}
+            <div class="form-group">
+                <label for="{{ feature }}">{{ feature.replace('_', ' ').title() }}</label>
+                <input 
+                    type="number" 
+                    id="{{ feature }}" 
+                    name="{{ feature }}" 
+                    step="0.01" 
+                    value="{% if input_values %}{{ input_values[feature] }}{% endif %}"
+                    required
+                >
+            </div>
+            {% endfor %}
+            
+            <div class="button-group">
+                <button type="submit" class="predict-btn">Predict Cultivar</button>
+                <button type="reset" class="reset-btn">Clear Form</button>
+            </div>
+        </form>
+        
+        {% if prediction %}
+        <div class="result-box">
+            <h2>🎯 Prediction Result</h2>
+            <div class="cultivar-result">
+                Predicted Cultivar: {{ prediction.cultivar_name }} (Class {{ prediction.cultivar_number }})
+            </div>
+            <div class="confidence">
+                Confidence: {{ prediction.confidence }}%
+            </div>
+            <div class="probabilities">
+                <h3>All Class Probabilities:</h3>
+                {% for cultivar, prob in prediction.all_probabilities.items() %}
+                <div class="probability-item">
+                    <span>{{ cultivar }}</span>
+                    <span><strong>{{ prob }}%</strong></span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if error %}
+        <div class="error-box">
+            <strong>⚠️ Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+        
+        <div class="info-section">
+            <h3>ℹ️ About This System</h3>
+            <ul>
+                <li><strong>Model:</strong> Random Forest Classifier</li>
+                <li><strong>Dataset:</strong> UCI Wine Dataset</li>
+                <li><strong>Features Used:</strong> {{ features|length }} selected features</li>
+                <li><strong>Accuracy:</strong> 100% on test set</li>
+                <li><strong>Classes:</strong> 3 wine cultivars (class_0, class_1, class_2)</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

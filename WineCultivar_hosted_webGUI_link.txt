@@ -1,0 +1,6 @@
+Name: [Your Name]
+Matric Number: [Your Matric Number]
+Machine Learning Algorithm Used: Random Forest Classifier
+Model Persistence Method: Joblib (Pickle)
+URL of Hosted Application: [To be added after deployment on Vercel]
+GitHub Repository Link: https://github.com/moladeji2302025-ctrl/Wine-Cultivar-Origin-Prediction-System
