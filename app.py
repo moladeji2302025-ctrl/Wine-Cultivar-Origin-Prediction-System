@@ -6,12 +6,18 @@ import os
 app = Flask(__name__)
 
 # Load the trained model
-model_path = os.path.join('model', 'wine_cultivar_model.pkl')
-model_data = joblib.load(model_path)
-model = model_data['model']
-scaler = model_data['scaler']
-selected_features = model_data['selected_features']
-target_names = model_data['target_names']
+try:
+    model_path = os.path.join('model', 'wine_cultivar_model.pkl')
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found at {model_path}")
+    model_data = joblib.load(model_path)
+    model = model_data['model']
+    scaler = model_data['scaler']
+    selected_features = model_data['selected_features']
+    target_names = model_data['target_names']
+except Exception as e:
+    print(f"Error loading model: {e}")
+    raise
 
 @app.route('/')
 def home():
@@ -27,7 +33,13 @@ def predict():
         feature_values = {}
         
         for feature in selected_features:
-            value = float(request.form.get(feature, 0))
+            value_str = request.form.get(feature)
+            if not value_str:
+                raise ValueError(f"Missing value for feature: {feature}")
+            try:
+                value = float(value_str)
+            except ValueError:
+                raise ValueError(f"Invalid numeric value for {feature}: {value_str}")
             input_features.append(value)
             feature_values[feature] = value
         
@@ -72,8 +84,20 @@ def api_predict():
     try:
         data = request.get_json()
         
+        # Validate all required features are present
+        missing_features = [f for f in selected_features if f not in data]
+        if missing_features:
+            return jsonify({'error': f'Missing required features: {missing_features}'}), 400
+        
         # Extract features in the correct order
-        input_features = [float(data.get(feature, 0)) for feature in selected_features]
+        input_features = []
+        for feature in selected_features:
+            try:
+                value = float(data[feature])
+                input_features.append(value)
+            except (ValueError, TypeError):
+                return jsonify({'error': f'Invalid value for feature {feature}'}), 400
+        
         input_array = np.array(input_features).reshape(1, -1)
         
         # Scale and predict
@@ -97,4 +121,7 @@ def api_predict():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Set debug=False for production deployment
+    # Use environment variable to control debug mode
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
